@@ -1,0 +1,9 @@
+https://hdfeos.org/software/heg.php
+
+使用HEG批量处理投影合并：
+HEG Tool HEG COMMAND LINE INTERFACE (CLI):
+1. environment variables
+MRTDATADIR=/home/bob/HEG/data
+PGSHOME=/home/bob/HEG/TOOLKIT_MTD
+2. command example
+./subset_stitch_swath -p HegSwathStitch.prm_beichen
