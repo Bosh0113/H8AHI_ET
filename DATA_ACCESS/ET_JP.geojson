@@ -1,1 +1,1 @@
-{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"coordinates":[[[120,50],[120,20],[160,20],[160,50],[120,50]]],"type":"Polygon"}}]}
+{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"coordinates":[[[120,50],[120,20],[150,20],[150,50],[120,50]]],"type":"Polygon"}}]}
