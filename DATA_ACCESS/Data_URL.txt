@@ -1,0 +1,6 @@
+MODIS:
+https://appeears.earthdatacloud.nasa.gov/task/area
+https://ladsweb.modaps.eosdis.nasa.gov/search/order/1
+
+ERA5:
+https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land?tab=overview
