@@ -9,7 +9,7 @@ END_TIME = '2018-07-19T23:59:59Z'
 UTC_OFFSET = 9 # hour
 time_internal = 10  # mins
 
-storage_path = r'D:\PhD_Workspace\H8_ET\231017\JP_AMATERASS'
+storage_path = os.getcwd()
 
 
 def download_AMATERASS_data(file_time):
@@ -21,7 +21,12 @@ def download_AMATERASS_data(file_time):
         file_name = file_time_str + file_suffix
         ftp_path= '/quasi-realtime/himawari829/archived/JP/'+ file_time_str[:6] + '/' + file_time_str[:8] + '/' + file_name
         remote_url = 'ftp://amaterass.cr.chiba-u.ac.jp' + ftp_path
-        local_file = storage_path + '/' + file_name
+
+        storage_folder = os.path.join(storage_path, file_time_str[:6], file_time_str[:8])
+        if not os.path.exists(storage_folder):
+            os.makedirs(storage_folder)
+
+        local_file = storage_folder + '/' + file_name
 
         if not os.path.exists(local_file):
             try:
