@@ -19,9 +19,12 @@ def filter_bad_values(matrix, lower_bound, upper_bound):
 
 # saturation vapor pressure in kPa from air temperature in celsius
 def saturation_vapor_pressure_from_air_temperature(air_temperature):
-    SVP_BASE = 0.611
-    SVP_MULT = 17.27
-    SVP_ADD = 237.7
+    # SVP_BASE = 0.611
+    SVP_BASE = 0.61121
+    # SVP_MULT = 17.27
+    SVP_MULT = 17.502
+    # SVP_ADD = 237.7
+    SVP_ADD = 240.97
     svp = SVP_BASE * exp((air_temperature * SVP_MULT) / (air_temperature + SVP_ADD))
     
     return svp
@@ -60,7 +63,8 @@ def fAPAR_from_ndvi(ndvi):
 # calculate slope of saturation vapor pressure to air temperature
 # in pascals over kelvin
 def delta_from_air_temperature(air_temperature):
-    return 4098 * (0.6108 * exp(17.27 * air_temperature / (237.7 + air_temperature))) / (air_temperature + 237.3) ** 2
+    # return 4098 * (0.6108 * exp(17.27 * air_temperature / (237.7 + air_temperature))) / (air_temperature + 237.3) ** 2
+    return 240.97*17.502*(0.61121 * exp((air_temperature * 17.502) / (air_temperature + 240.97))) / (air_temperature + 240.97) ** 2
 
 
 # cut max and min values to defined values
@@ -92,19 +96,20 @@ def fT_fun(Tmax,Topt):
 # theory trying to capture temp at peak photosynthesis (wet, green, high vpd, high radiation)
 def Topt_fun(RN,TMAX,SAVI,VPD):
     ''' returns the optimal temperature
-        inputs 30 day averages of: RN, TACTUAL, SAVI, VPD'''
+        inputs 14 day averages of: RN, TACTUAL, SAVI, VPD'''
     topt_mask = ~np.isnan(np.array(RN)) & ~np.isnan(TMAX) & ~np.isnan(SAVI) & ~np.isnan(VPD)
     
-    PHEN_RAW = np.ones(np.shape(RN)); PHEN_RAW[:]=np.nan;
+    PHEN_RAW = np.ones(np.shape(RN)); PHEN_RAW[:]=np.nan
 
-    VPD_g1 = VPD;VPD_g1[VPD<0.5]=0.5;
+    VPD_g1 = VPD
+    VPD_g1[VPD<0.5]=0.5
     PHEN_RAW[topt_mask] = RN[topt_mask]*TMAX[topt_mask]*SAVI[topt_mask]/VPD_g1[topt_mask]
 
-    max_idx = PHEN_RAW.argmax();
-    T_opt = TMAX[max_idx];
+    max_idx = PHEN_RAW.argmax()
+    T_opt = TMAX[max_idx]
     
     if np.isnan(T_opt):
-        T_opt = np.nanmax(np.nanmax(TMAX))-5;
+        T_opt = np.nanmax(np.nanmax(TMAX))-5
 
     return T_opt
 
@@ -145,20 +150,21 @@ def ptjpl(AA, verbose=True, floor_saturation_vapor_pressure=DEFAULT_FLOOR_SATURA
                 PTJPL original scaled with EF and adiation
         """
     air_temperature_K =       np.array(AA.TA)          # (K)
-    air_temperature_mean_K =  np.array(AA.TA_day_mean) # (K)
+    # air_temperature_mean_K =  np.array(AA.TA_day_mean) # (K)
     ndvi_mean=                np.array(AA.NDVI_day_mean)               # (0-1.0)
     net_radiation=            np.array(AA.NETRAD);            # (W/m2)
-    daily_radiation=          np.array(AA.NETRAD_day)         # (W/m2)
+    # daily_radiation=          np.array(AA.NETRAD_day)         # (W/m2)
     
-    RH =                      np.array(AA.RH_hour_min/100.)         # (%), Can run with vapor pressure see comments out below
+    RH =                      np.array(AA.RH/100.)         # (%), Can run with vapor pressure see comments out below
 
     #     water_vapor_pressure_mean_Pa =np.array(AA.VPD_day_max)*100# set VPD of input dataset to Pa
     #     optimum_temperature=18; # use the function Topt_fun to return this value [ constrain to +5 o C, if below a certain value, set fT to 1.0]
     #     fAPARmax=0.65 # grab this value from MODIS timeseries dataset
 
     # convert temperatures from kelvin to celsius
-    air_temperature = air_temperature_K - 273
-    air_temperature_mean = air_temperature_mean_K - 273
+    air_temperature = air_temperature_K - 273.15
+    AA['TA_C']= air_temperature
+    # air_temperature_mean = air_temperature_mean_K - 273.15
     
     #     scale water vapor pressure from Pa to kPa
     #     water_vapor_pressure_mean = water_vapor_pressure_mean_Pa * 0.001
@@ -169,7 +175,8 @@ def ptjpl(AA, verbose=True, floor_saturation_vapor_pressure=DEFAULT_FLOOR_SATURA
         print('calculating vapor pressure deficit [kPa]')
     
     # calculate saturation vapor pressure in kPa from air temperature in celcius
-    saturation_vapor_pressure = saturation_vapor_pressure_from_air_temperature(air_temperature_mean)#[kPA]
+    # saturation_vapor_pressure = saturation_vapor_pressure_from_air_temperature(air_temperature_mean)#[kPA]
+    saturation_vapor_pressure = saturation_vapor_pressure_from_air_temperature(air_temperature)#[kPA]
     
     # ***REPLACED THIS WITH ACTUAL MEASTUREMENTS FROM TOWERS:
     # calculate relative humidity from water vapor pressure and saturation vapor pressure
@@ -188,13 +195,17 @@ def ptjpl(AA, verbose=True, floor_saturation_vapor_pressure=DEFAULT_FLOOR_SATURA
     
     # lower bound of vapor pressure deficit is zero, negative values replaced with nodata
     vapor_pressure_deficit[vapor_pressure_deficit < 0] = np.nan
+    # AA['VPD_roll']=vapor_pressure_deficit
+    AA['VPD']= vapor_pressure_deficit
     
     # calculate relative surface wetness from relative humidity
-    AA['RH_roll']=relative_humidity; 
+    AA['RH_roll']=relative_humidity
     relative_surface_wetness = relative_humidity ** 4
     relative_surface_wetness[air_temperature<=0]=0.; # FROZEN WATER
     # calculate slope of saturation to vapor pressure curve Pa/K
     delta = delta_from_air_temperature(air_temperature)
+    # calculate delta / (delta + gamma)
+    epsilon = delta / (delta + PSYCHROMETRIC_GAMMA)
     
     # calculate vegetation values
     if verbose:
@@ -204,7 +215,7 @@ def ptjpl(AA, verbose=True, floor_saturation_vapor_pressure=DEFAULT_FLOOR_SATURA
     fAPAR = fAPAR_from_ndvi(ndvi_mean)
     fAPAR = enforce_boundaries(fAPAR,0.,1.)
     fAPARmax = np.nanmax(fAPAR)
-    AA['fAPAR']=fAPAR;
+    AA['fAPAR']=fAPAR
 
     # calculate fIPAR from NDVI mean
     fIPAR = fIPAR_from_ndvi(ndvi_mean)
@@ -215,37 +226,37 @@ def ptjpl(AA, verbose=True, floor_saturation_vapor_pressure=DEFAULT_FLOOR_SATURA
     # calculate plant moisture constraint (fM) from fraction of photosynthetically active radiation,
     # constrained between zero and one
     plant_moisture_constraint = enforce_boundaries(fAPAR / fAPARmax, 0, 1)
-    AA['VPD_roll']=vapor_pressure_deficit;     
+
     # calculate soil moisture constraint from relative humidity and vapor pressure deficit,
     # constrained between zero and one
-    soil_moisture_constraint = enforce_boundaries(AA.RH_roll.rolling(14,1).mean() ** (AA.VPD_roll.rolling(14,1).mean() / BETA), 0, 1)
+    # soil_moisture_constraint = enforce_boundaries(AA.RH_roll.rolling(14,1).mean() ** (AA.VPD_roll.rolling(14,1).mean() / BETA), 0, 1) # github
+    soil_moisture_constraint = enforce_boundaries(relative_humidity ** vapor_pressure_deficit, 0, 1)
     soil_moisture_constraint[air_temperature<0]=0.00
     AA['soil_moisture_constraint']=soil_moisture_constraint
-    # take fractional vegetation cover from fraction of photosynthetically active radiation
-    fractional_vegetation_cover = enforce_boundaries(fIPAR, 0, 1)
     
     # calculate SAVI from NDVI
     savi_mean = savi_from_ndvi(ndvi_mean)
-    AA['savi']=savi_mean;
-    AA['VPD']= vapor_pressure_deficit
+    AA['savi']=savi_mean
 
-    # calculate optimum_temperature from flux tower:
-    optimum_temperature = Topt_fun(np.array(AA.NETRAD_day.rolling(30,1).mean()),np.array(AA.TA_day_max.rolling(30,1).mean()),np.array(AA['savi'].rolling(30,1).mean()),np.array(AA['VPD'].rolling(30,1).mean()))
+    # calculate optimum_temperature from: R𝑛 , Tair, SAVI, and VPD used to calculate Topt are all 2-week forward averages. (14*24*6 data)
+    # optimum_temperature = Topt_fun(np.array(AA.NETRAD_day.rolling(30,1).mean()),np.array(air_temperature_mean.rolling(30,1).mean()),np.array(AA['savi'].rolling(30,1).mean()),np.array(AA['VPD'].rolling(30,1).mean()))
+    optimum_temperature = Topt_fun(np.array(AA.NETRAD.rolling(14*24*6,24*6).mean()),
+                                   np.array(AA.TA_C.rolling(14*24*6,24*6).mean()),
+                                   np.array(AA['savi'].rolling(14*24*6,24*6).mean()),
+                                   np.array(AA['VPD'].rolling(14*24*6,24*6).mean()))
 
     if verbose:
         print('calculating plant optimum temperature')
         print(str(optimum_temperature)+ ' C')
 
     # calculate plant temperature constraint (fT) from optimal phenology
-    plant_temperature_constraint = fT_fun(air_temperature_mean,optimum_temperature)
+    # plant_temperature_constraint = fT_fun(air_temperature_mean, optimum_temperature)
+    plant_temperature_constraint = fT_fun(air_temperature, optimum_temperature)
     # exp(-(((air_temperature_mean - optimum_temperature) / optimum_temperature) ** 2))
 
     # calculate leaf area index : now extract from MODIS dataset
     leaf_area_index = -log(1 - fIPAR) * (1 / KPAR)
     # leaf_area_index = np.array(AA.LAI);
-
-    # calculate delta / (delta + gamma)
-    epsilon = delta / (delta + PSYCHROMETRIC_GAMMA)
     
     # soil evaporation
     if verbose:
@@ -254,11 +265,13 @@ def ptjpl(AA, verbose=True, floor_saturation_vapor_pressure=DEFAULT_FLOOR_SATURA
     # caluclate net radiation of the soil from leaf area index
     soil_net_radiation = net_radiation * exp(-KRN * leaf_area_index)
 
+    # take fractional vegetation cover from fraction of photosynthetically active radiation
+    fractional_vegetation_cover = enforce_boundaries(fIPAR, 0, 1)
+
     # calculate instantaneous soil heat flux from net radiation and fractional vegetation cover
     soil_heat_flux = net_radiation * (0.05 + (1 - fractional_vegetation_cover) * 0.265)
     # change the above to METRIC G
-
-    soil_heat_flux[soil_heat_flux < 0] = 0;
+    soil_heat_flux[soil_heat_flux < 0] = 0
     soil_heat_flux[soil_heat_flux > 0.35 * soil_net_radiation] = 0.35 * soil_net_radiation[soil_heat_flux > 0.35 * soil_net_radiation]
 
     # calculate soil evaporation (LEs) from relative surface wetness, soil moisture constraint,
@@ -300,14 +313,14 @@ def ptjpl(AA, verbose=True, floor_saturation_vapor_pressure=DEFAULT_FLOOR_SATURA
     evapotranspiration[np.isinf(evapotranspiration)] = np.nan
     evapotranspiration[evapotranspiration < 0] = np.nan
 
-    # daily evapotranspiration
-    if verbose:
-        print('calculating daily evapotranspiration')
-    # calculate evaporative fraction (EF) from evapotranspiration, net radiation, and soil heat flux
-    evaporative_fraction = evapotranspiration / (net_radiation - soil_heat_flux)
+    # # daily evapotranspiration
+    # if verbose:
+    #     print('calculating daily evapotranspiration')
+    # # calculate evaporative fraction (EF) from evapotranspiration, net radiation, and soil heat flux
+    # evaporative_fraction = evapotranspiration / (net_radiation - soil_heat_flux)
 
-    # calculate daily evapotranspiration from daily net radiation and evaporative fraction
-    daily_evapotranspiration = daily_radiation * evaporative_fraction
+    # # calculate daily evapotranspiration from daily net radiation and evaporative fraction
+    # daily_evapotranspiration = daily_radiation * evaporative_fraction
     
     # potential evapotranspiration
     if verbose:
@@ -319,7 +332,7 @@ def ptjpl(AA, verbose=True, floor_saturation_vapor_pressure=DEFAULT_FLOOR_SATURA
     # potential_evaporation        = PRIESTLEY_TAYLOR_ALPHA * epsilon * (soil_net_radiation - soil_heat_flux)
     
     # append new data to array
-    results = AA;
+    results = AA
     results['evapotranspiration'] =           evapotranspiration    
     # potential et added to results
     results['potential_evapotranspiration']=  potential_evapotranspiration
