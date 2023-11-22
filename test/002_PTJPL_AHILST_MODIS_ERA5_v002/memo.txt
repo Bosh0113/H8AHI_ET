@@ -1,0 +1,13 @@
+v0.0
+- AMATERASS Rsd, RH, Ta
+- MOD05L2/MYD05L2 PWV
+- MOD11L2 Emissivity
+- ERA4 Albedo
+- MOD43GA ref->NDVI
+- AHI LST
+
+v0.01
++ Rld 更换为 ERA5 1°/hourly
+
+V0.02
++ Emissivity 更换为MOD21A1D.061
