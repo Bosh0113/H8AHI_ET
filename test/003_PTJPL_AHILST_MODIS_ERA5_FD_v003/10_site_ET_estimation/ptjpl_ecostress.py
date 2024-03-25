@@ -151,11 +151,11 @@ def ptjpl(AA, verbose=True, floor_saturation_vapor_pressure=DEFAULT_FLOOR_SATURA
         """
     air_temperature_K =       np.array(AA.TA)          # (K)
     # air_temperature_mean_K =  np.array(AA.TA_day_mean) # (K)
-    ndvi_mean=                np.array(AA.NDVI_day_mean)               # (0-1.0)
+    ndvi_mean=                np.array(AA.NDVI)               # (0-1.0)
     net_radiation=            np.array(AA.NETRAD);            # (W/m2)
     # daily_radiation=          np.array(AA.NETRAD_day)         # (W/m2)
-    
-    RH =                      np.array(AA.RH/100.)         # (%), Can run with vapor pressure see comments out below
+    water_vapor_pressure_mean=np.array(AA.Td)       # (K)
+    # RH =                      np.array(AA.RH/100.)         # (%), Can run with vapor pressure see comments out below
 
     #     water_vapor_pressure_mean_Pa =np.array(AA.VPD_day_max)*100# set VPD of input dataset to Pa
     #     optimum_temperature=18; # use the function Topt_fun to return this value [ constrain to +5 o C, if below a certain value, set fT to 1.0]
@@ -180,15 +180,15 @@ def ptjpl(AA, verbose=True, floor_saturation_vapor_pressure=DEFAULT_FLOOR_SATURA
     
     # ***REPLACED THIS WITH ACTUAL MEASTUREMENTS FROM TOWERS:
     # calculate relative humidity from water vapor pressure and saturation vapor pressure
-    #     relative_humidity = water_vapor_pressure_mean / saturation_vapor_pressure
+    relative_humidity = water_vapor_pressure_mean / saturation_vapor_pressure
     # upper bound of relative humidity is one, results higher than one are capped at one
     # WE INSTEAD HAVE RH SO WE CALCULATE VPD FROM THIS:
-    relative_humidity = filter_bad_values(RH,0.,1.)
+    relative_humidity = filter_bad_values(relative_humidity,0.,1.)
     
     # floor saturation vapor pressure at 1
     if floor_saturation_vapor_pressure:
         saturation_vapor_pressure[saturation_vapor_pressure < 1] = 1
-    water_vapor_pressure_mean = RH*saturation_vapor_pressure
+    # water_vapor_pressure_mean = RH*saturation_vapor_pressure
     
     # calculate vapor pressure deficit from water vapor pressure
     vapor_pressure_deficit = saturation_vapor_pressure - water_vapor_pressure_mean # [kPa]
