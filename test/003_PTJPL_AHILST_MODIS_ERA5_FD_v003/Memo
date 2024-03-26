@@ -1,0 +1,9 @@
+Inputs of PT-JPL model are:
+    Downwelling shortwave radiation (Rsd): AMATERASS (4km, 10min)
+    Land surface temperature (LST): CEReS Yamamoto et al. (2km, hourly)
+    Emissivity: MOD21A1 (1km, daily)
+    NDVI: MOD31A2 (1km, 16days)
+    Albedo: ERA5 (0.1°, hourly)
+    Downwelling longwave radiation (Rld): ERA5 (0.1°, hourly)
+    Dewpoint temperature (Td): ERA5 (0.1°, hourly)
+    Air temperature (Ta): ERA5 (0.1°, hourly)
